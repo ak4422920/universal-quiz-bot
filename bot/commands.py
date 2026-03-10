@@ -5,6 +5,7 @@ from quiz_engines.poll_quiz import send_poll_quiz
 from quiz_engines.inline_quiz import send_inline_quiz
 from challenges.challenge_manager import create_challenge
 from tournaments.tournament_manager import create_tournament, join_tournament
+from utils.leaderboard import get_top_users
 
 
 async def start(update, context):
@@ -108,19 +109,18 @@ async def createtournament(update, context):
     )
 
 
-async def join_tournament_command(update, context):
+async def leaderboard(update, context):
 
-    query = update.callback_query
-    await query.answer()
+    top_users = get_top_users()
 
-    data = query.data.split("|")
+    text = "🏆 Leaderboard\n\n"
 
-    tournament_id = data[1]
+    rank = 1
 
-    user_id = query.from_user.id
+    for user in top_users:
 
-    join_tournament(tournament_id, user_id)
+        text += f"{rank}. {user['name']} - {user['score']}\n"
 
-    await query.edit_message_text(
-        "You joined the tournament!"
-    )
+        rank += 1
+
+    await update.message.reply_text(text)
