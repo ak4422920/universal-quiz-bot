@@ -1,6 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 from game.session_engine import create_session, get_session, update_session, end_session
+from utils.leaderboard import add_score
 
 
 async def send_inline_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -64,6 +65,9 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if index >= session["total_questions"]:
 
         end_session(session_id)
+
+        # leaderboard update
+        add_score(query.from_user.id, score)
 
         await query.edit_message_text(
             f"Quiz finished!\n\nScore: {score}/{session['total_questions']}"
