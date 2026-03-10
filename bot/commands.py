@@ -1,6 +1,7 @@
 from database.mongo import users
 from utils.chat_register import register_chat
 from quiz_engines.poll_quiz import send_poll_quiz
+from quiz_engines.inline_quiz import send_inline_quiz
 
 
 async def start(update, context):
@@ -31,4 +32,10 @@ async def start(update, context):
 
 async def quiz(update, context):
 
-    await send_poll_quiz(update, context)
+    chat = update.effective_chat
+
+    # simple rule for now
+    if chat.type == "private":
+        await send_inline_quiz(update, context)
+    else:
+        await send_poll_quiz(update, context)
