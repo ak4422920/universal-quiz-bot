@@ -1,35 +1,36 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
-from database.mongo import questions
+from game.session_engine import create_session, get_session, update_session, end_session
+
 
 async def send_inline_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    chat_id = update.effective_chat.id
+    user = update.effective_user
 
-    # try getting question from database
-    question = questions.find_one()
+    session = create_session(user.id, 5)
 
-    if question:
-        q_text = question["question"]
-        options = question["options"]
-        correct = question["correct"]
-    else:
-        # fallback question
-        q_text = "What is the capital of India?"
-        options = ["Mumbai", "Delhi", "Kolkata", "Chennai"]
-        correct = 1
+    question = session["questions"][0]
+
+    await send_question(update, context, question, session["session_id"])
+
+
+async def send_question(update, context, question, session_id):
+
+    q_text = question["question"]
+    options = question["options"]
+    correct = question["correct"]
 
     keyboard = []
 
     for i, option in enumerate(options):
         keyboard.append(
-            [InlineKeyboardButton(option, callback_data=f"answer_{i}_{correct}")]
+            [InlineKeyboardButton(option, callback_data=f"answer|{session_id}|{i}|{correct}")]
         )
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await context.bot.send_message(
-        chat_id=chat_id,
+        chat_id=update.effective_chat.id,
         text=q_text,
         reply_markup=reply_markup
     )
@@ -40,14 +41,54 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    data = query.data.split("_")
+    data = query.data.split("|")
 
-    chosen = int(data[1])
-    correct = int(data[2])
+    session_id = data[1]
+    chosen = int(data[2])
+    correct = int(data[3])
+
+    session = get_session(query.from_user.id)
+
+    if not session:
+        await query.edit_message_text("Session expired.")
+        return
+
+    score = session["score"]
+    index = session["current_index"]
 
     if chosen == correct:
-        text = "✅ Correct answer!"
-    else:
-        text = "❌ Wrong answer!"
+        score += 1
 
-    await query.edit_message_text(text=text)
+    index += 1
+
+    if index >= session["total_questions"]:
+
+        end_session(session_id)
+
+        await query.edit_message_text(
+            f"Quiz finished!\n\nScore: {score}/{session['total_questions']}"
+        )
+
+        return
+
+    update_session(session_id, score, index)
+
+    next_question = session["questions"][index]
+
+    q_text = next_question["question"]
+    options = next_question["options"]
+    correct = next_question["correct"]
+
+    keyboard = []
+
+    for i, option in enumerate(options):
+        keyboard.append(
+            [InlineKeyboardButton(option, callback_data=f"answer|{session_id}|{i}|{correct}")]
+        )
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(
+        text=q_text,
+        reply_markup=reply_markup
+    )
