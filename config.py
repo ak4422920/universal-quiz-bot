@@ -1,0 +1,11 @@
+import os
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MONGO_URI = os.getenv("MONGO_URI")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+LOG_CHANNEL = os.getenv("LOG_CHANNEL")
+PDF_STORAGE_CHANNEL = os.getenv("PDF_STORAGE_CHANNEL")
+PDF_REVIEW_CHANNEL = os.getenv("PDF_REVIEW_CHANNEL")
+
+FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL")
