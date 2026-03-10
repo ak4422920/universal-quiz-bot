@@ -7,6 +7,8 @@ from challenges.challenge_manager import create_challenge
 from tournaments.tournament_manager import create_tournament, join_tournament
 from utils.leaderboard import get_top_users
 from utils.elite_ranking import get_elite_players
+from pdf.pdf_manager import save_pdf_record
+from config import PDF_REVIEW_CHANNEL
 
 
 async def start(update, context):
@@ -45,130 +47,65 @@ async def quiz(update, context):
         await send_poll_quiz(update, context)
 
 
-async def challenge(update, context):
+async def uploadpdf(update, context):
 
     user = update.effective_user
 
     if not context.args:
 
         await update.message.reply_text(
-            "Usage: /challenge USER_ID"
+            "Usage: /uploadpdf EXAM\nThen send the PDF."
         )
 
         return
 
-    opponent_id = int(context.args[0])
+    exam = context.args[0]
 
-    challenge = create_challenge(user.id, opponent_id)
+    context.user_data["upload_exam"] = exam
+
+    await update.message.reply_text(
+        "Now send the PDF file."
+    )
+
+
+async def receive_pdf(update, context):
+
+    if "upload_exam" not in context.user_data:
+        return
+
+    document = update.message.document
+
+    if not document.file_name.endswith(".pdf"):
+
+        await update.message.reply_text("Please upload a PDF file.")
+        return
+
+    exam = context.user_data["upload_exam"]
+
+    save_pdf_record(update.effective_user.id, exam, document.file_id)
 
     keyboard = [
         [
             InlineKeyboardButton(
-                "Accept Challenge",
-                callback_data=f"accept_challenge|{challenge['challenge_id']}"
+                "Approve",
+                callback_data=f"approve_pdf|{document.file_id}"
+            ),
+            InlineKeyboardButton(
+                "Reject",
+                callback_data=f"reject_pdf|{document.file_id}"
             )
         ]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        f"You challenged user {opponent_id}!",
+    await context.bot.send_document(
+        chat_id=PDF_REVIEW_CHANNEL,
+        document=document.file_id,
+        caption=f"PDF Upload\nExam: {exam}",
         reply_markup=reply_markup
     )
 
-
-async def createtournament(update, context):
-
-    if len(context.args) < 2:
-
-        await update.message.reply_text(
-            "Usage: /createtournament NAME EXAM"
-        )
-
-        return
-
-    name = context.args[0]
-    exam = context.args[1]
-
-    tournament = create_tournament(name, exam)
-
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "Join Tournament",
-                callback_data=f"join_tournament|{tournament['tournament_id']}"
-            )
-        ]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
     await update.message.reply_text(
-        f"🏆 Tournament Created!\n\n{name}\nExam: {exam}",
-        reply_markup=reply_markup
+        "PDF sent for admin approval."
     )
-
-
-async def leaderboard(update, context):
-
-    top_users = get_top_users()
-
-    text = "🏆 Leaderboard\n\n"
-
-    rank = 1
-
-    for user in top_users:
-
-        text += f"{rank}. {user['name']} - {user['score']}\n"
-
-        rank += 1
-
-    await update.message.reply_text(text)
-
-
-async def elite(update, context):
-
-    elite_players = get_elite_players()
-
-    text = "👑 Elite Ranking\n\n"
-
-    rank = 1
-
-    for user in elite_players:
-
-        text += f"{rank}. {user['name']} - {user['score']}\n"
-
-        rank += 1
-
-    if rank == 1:
-        text += "No elite players yet."
-
-    await update.message.reply_text(text)
-
-
-async def profile(update, context):
-
-    user = update.effective_user
-
-    data = users.find_one({"user_id": user.id})
-
-    if not data:
-        return
-
-    badges = data.get("badges", [])
-
-    text = f"👤 {data['name']}\n"
-    text += f"⭐ Score: {data['score']}\n\n"
-
-    if badges:
-
-        text += "🎖 Badges:\n"
-
-        for badge in badges:
-            text += f"{badge}\n"
-
-    else:
-        text += "No badges yet."
-
-    await update.message.reply_text(text)
