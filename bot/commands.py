@@ -6,6 +6,7 @@ from quiz_engines.inline_quiz import send_inline_quiz
 from challenges.challenge_manager import create_challenge
 from tournaments.tournament_manager import create_tournament, join_tournament
 from utils.leaderboard import get_top_users
+from utils.elite_ranking import get_elite_players
 
 
 async def start(update, context):
@@ -122,6 +123,26 @@ async def leaderboard(update, context):
         text += f"{rank}. {user['name']} - {user['score']}\n"
 
         rank += 1
+
+    await update.message.reply_text(text)
+
+
+async def elite(update, context):
+
+    elite_players = get_elite_players()
+
+    text = "👑 Elite Ranking\n\n"
+
+    rank = 1
+
+    for user in elite_players:
+
+        text += f"{rank}. {user['name']} - {user['score']}\n"
+
+        rank += 1
+
+    if rank == 1:
+        text += "No elite players yet."
 
     await update.message.reply_text(text)
 
