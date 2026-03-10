@@ -1,5 +1,6 @@
 from database.mongo import users
 from utils.chat_register import register_chat
+from quiz_engines.poll_quiz import send_poll_quiz
 
 
 async def start(update, context):
@@ -30,6 +31,4 @@ async def start(update, context):
 
 async def quiz(update, context):
 
-    await update.message.reply_text(
-        "Quiz system will start soon."
-    )
+    await send_poll_quiz(update, context)
