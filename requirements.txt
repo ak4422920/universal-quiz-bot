@@ -1,0 +1,8 @@
+python-telegram-bot==20.7
+pymongo
+google-generativeai
+python-dotenv
+pymupdf
+apscheduler
+fastapi
+uvicorn
