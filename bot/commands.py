@@ -4,6 +4,7 @@ from utils.chat_register import register_chat
 from quiz_engines.poll_quiz import send_poll_quiz
 from quiz_engines.inline_quiz import send_inline_quiz
 from challenges.challenge_manager import create_challenge
+from tournaments.tournament_manager import create_tournament, join_tournament
 
 
 async def start(update, context):
@@ -72,4 +73,54 @@ async def challenge(update, context):
     await update.message.reply_text(
         f"You challenged user {opponent_id}!",
         reply_markup=reply_markup
+    )
+
+
+async def createtournament(update, context):
+
+    if len(context.args) < 2:
+
+        await update.message.reply_text(
+            "Usage: /createtournament NAME EXAM"
+        )
+
+        return
+
+    name = context.args[0]
+    exam = context.args[1]
+
+    tournament = create_tournament(name, exam)
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Join Tournament",
+                callback_data=f"join_tournament|{tournament['tournament_id']}"
+            )
+        ]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        f"🏆 Tournament Created!\n\n{name}\nExam: {exam}",
+        reply_markup=reply_markup
+    )
+
+
+async def join_tournament_command(update, context):
+
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data.split("|")
+
+    tournament_id = data[1]
+
+    user_id = query.from_user.id
+
+    join_tournament(tournament_id, user_id)
+
+    await query.edit_message_text(
+        "You joined the tournament!"
     )
