@@ -9,6 +9,7 @@ from utils.leaderboard import get_top_users
 from utils.elite_ranking import get_elite_players
 from pdf.pdf_manager import save_pdf_record
 from config import PDF_REVIEW_CHANNEL
+from ai.gemini_generator import generate_questions
 
 
 async def start(update, context):
@@ -47,65 +48,61 @@ async def quiz(update, context):
         await send_poll_quiz(update, context)
 
 
-async def uploadpdf(update, context):
-
-    user = update.effective_user
+async def generate(update, context):
 
     if not context.args:
 
         await update.message.reply_text(
-            "Usage: /uploadpdf EXAM\nThen send the PDF."
+            "Usage: /generate EXAM"
         )
 
         return
 
     exam = context.args[0]
 
-    context.user_data["upload_exam"] = exam
+    await update.message.reply_text(
+        "Generating questions..."
+    )
+
+    count = generate_questions(exam)
 
     await update.message.reply_text(
-        "Now send the PDF file."
+        f"{count} questions generated for {exam}."
     )
 
 
-async def receive_pdf(update, context):
+async def leaderboard(update, context):
 
-    if "upload_exam" not in context.user_data:
-        return
+    top_users = get_top_users()
 
-    document = update.message.document
+    text = "🏆 Leaderboard\n\n"
 
-    if not document.file_name.endswith(".pdf"):
+    rank = 1
 
-        await update.message.reply_text("Please upload a PDF file.")
-        return
+    for user in top_users:
 
-    exam = context.user_data["upload_exam"]
+        text += f"{rank}. {user['name']} - {user['score']}\n"
 
-    save_pdf_record(update.effective_user.id, exam, document.file_id)
+        rank += 1
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "Approve",
-                callback_data=f"approve_pdf|{document.file_id}"
-            ),
-            InlineKeyboardButton(
-                "Reject",
-                callback_data=f"reject_pdf|{document.file_id}"
-            )
-        ]
-    ]
+    await update.message.reply_text(text)
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await context.bot.send_document(
-        chat_id=PDF_REVIEW_CHANNEL,
-        document=document.file_id,
-        caption=f"PDF Upload\nExam: {exam}",
-        reply_markup=reply_markup
-    )
+async def elite(update, context):
 
-    await update.message.reply_text(
-        "PDF sent for admin approval."
-    )
+    elite_players = get_elite_players()
+
+    text = "👑 Elite Ranking\n\n"
+
+    rank = 1
+
+    for user in elite_players:
+
+        text += f"{rank}. {user['name']} - {user['score']}\n"
+
+        rank += 1
+
+    if rank == 1:
+        text += "No elite players yet."
+
+    await update.message.reply_text(text)
