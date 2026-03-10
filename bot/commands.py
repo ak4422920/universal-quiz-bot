@@ -124,3 +124,30 @@ async def leaderboard(update, context):
         rank += 1
 
     await update.message.reply_text(text)
+
+
+async def profile(update, context):
+
+    user = update.effective_user
+
+    data = users.find_one({"user_id": user.id})
+
+    if not data:
+        return
+
+    badges = data.get("badges", [])
+
+    text = f"👤 {data['name']}\n"
+    text += f"⭐ Score: {data['score']}\n\n"
+
+    if badges:
+
+        text += "🎖 Badges:\n"
+
+        for badge in badges:
+            text += f"{badge}\n"
+
+    else:
+        text += "No badges yet."
+
+    await update.message.reply_text(text)
